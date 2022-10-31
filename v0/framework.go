@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 )
 
 type app struct {
@@ -13,18 +14,11 @@ type app struct {
 
 func NewApp(commands Commands) *app {
 	return &app{
-		commands: make(Commands, 0),
+		commands: commands,
 	}
 }
 
 func (app *app) Run() error {
-	if err := app.loop(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (app *app) loop() error {
 	rdr := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("> ")
@@ -35,9 +29,10 @@ func (app *app) loop() error {
 			}
 			break
 		}
-		cmd, err := app.parseCommand(line)
+		cmd, err := app.parseCommand(strings.TrimSpace(line))
 		if err != nil {
-			return err
+			fmt.Printf("[error]: %v\n", err)
+			continue
 		}
 		_ = cmd
 	}
@@ -45,22 +40,27 @@ func (app *app) loop() error {
 }
 
 func (app *app) parseCommand(s string) (*command, error) {
+	var found *command
 	for _, cmd := range app.commands {
 		matches := cmd.rgx.FindStringSubmatch(s)
 		if matches == nil {
 			continue
 		}
+		found = cmd
 		names := cmd.rgx.SubexpNames()
 		if len(matches) != len(names) {
-			return nil, fmt.Errorf("bad input for command %q", matches[1])
+			return nil, fmt.Errorf("bad input string for command %q: %v", matches[1], matches[2:])
 		}
-		req := CliRequest{}
+		req := make(CliRequest)
 		for i := 1; i < len(matches); i++ {
 			req[names[i]] = matches[i]
 		}
 		if err := cmd.controller.Handle(req); err != nil {
-			return nil, fmt.Errorf("parse input for command %q: %v", matches[1], err)
+			return nil, fmt.Errorf("parse input string for command %q: %v", matches[1], err)
 		}
 	}
-	return nil, nil
+	if found == nil {
+		return nil, fmt.Errorf("can't find command for input string %q", s)
+	}
+	return found, nil
 }
