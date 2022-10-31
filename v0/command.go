@@ -7,6 +7,7 @@ type Commands []*command
 type command struct {
 	pattern    string
 	rgx        *regexp.Regexp
+	params     map[string]string
 	controller CliController
 }
 

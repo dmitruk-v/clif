@@ -34,7 +34,10 @@ func (app *app) Run() error {
 			fmt.Printf("[error]: %v\n", err)
 			continue
 		}
-		_ = cmd
+		if err := executeCommand(cmd); err != nil {
+			fmt.Printf("[error]: %v\n", err)
+			continue
+		}
 	}
 	return nil
 }
@@ -49,18 +52,29 @@ func (app *app) parseCommand(s string) (*command, error) {
 		found = cmd
 		names := cmd.rgx.SubexpNames()
 		if len(matches) != len(names) {
-			return nil, fmt.Errorf("bad input string for command %q: %v", matches[1], matches[2:])
+			return nil, fmt.Errorf("parse command: bad input string for command %q: %v", matches[1], matches[2:])
 		}
-		req := make(CliRequest)
+		found.params = make(map[string]string)
 		for i := 1; i < len(matches); i++ {
-			req[names[i]] = matches[i]
-		}
-		if err := cmd.controller.Handle(req); err != nil {
-			return nil, fmt.Errorf("parse input string for command %q: %v", matches[1], err)
+			found.params[names[i]] = matches[i]
 		}
 	}
 	if found == nil {
-		return nil, fmt.Errorf("can't find command for input string %q", s)
+		return nil, fmt.Errorf("parse command: no commands matches input string %q", s)
 	}
 	return found, nil
+}
+
+func executeCommand(cmd *command) error {
+	req := make(CliRequest)
+	for key, val := range cmd.params {
+		req[key] = val
+	}
+	if cmd.controller == nil {
+		return fmt.Errorf("execute command %q: nil controller", req)
+	}
+	if err := cmd.controller.Handle(req); err != nil {
+		return fmt.Errorf("execute command %q: %v", req, err)
+	}
+	return nil
 }
