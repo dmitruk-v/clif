@@ -52,7 +52,7 @@ func (app *app) parseCommand(s string) (*command, error) {
 		found = cmd
 		names := cmd.rgx.SubexpNames()
 		if len(matches) != len(names) {
-			return nil, fmt.Errorf("parse command: bad input string for command %q: %v", matches[1], matches[2:])
+			return nil, fmt.Errorf("parse command: bad input for command %q: %v", matches[1], matches[2:])
 		}
 		found.params = make(map[string]string)
 		for i := 1; i < len(matches); i++ {
@@ -60,7 +60,7 @@ func (app *app) parseCommand(s string) (*command, error) {
 		}
 	}
 	if found == nil {
-		return nil, fmt.Errorf("parse command: no commands matches input string %q", s)
+		return nil, fmt.Errorf("parse command: no match for input %q", s)
 	}
 	return found, nil
 }

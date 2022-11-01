@@ -1,6 +1,10 @@
 package clim
 
-import "regexp"
+import (
+	"fmt"
+	"regexp"
+	"strings"
+)
 
 type Commands []*command
 
@@ -12,9 +16,22 @@ type command struct {
 }
 
 func NewCommand(pattern string, controller CliController) *command {
+	parts := strings.Split(pattern, " ")
+	result := "^"
+	for i, pt := range parts {
+		namereg := strings.Split(pt, ":")
+		if len(namereg) != 2 {
+			panic(fmt.Sprintf("wrong syntax in pattern %v", pattern))
+		}
+		if i > 0 {
+			result += " "
+		}
+		result += fmt.Sprintf("(?P<%v>%v)", namereg[0], namereg[1])
+	}
+	result += "$"
 	return &command{
-		pattern:    pattern,
-		rgx:        regexp.MustCompile(pattern),
+		pattern:    result,
+		rgx:        regexp.MustCompile(result),
 		controller: controller,
 	}
 }
