@@ -18,7 +18,14 @@ func NewApp(commands Commands) *app {
 	}
 }
 
-func (app *app) Run() error {
+func (app *app) Run(onstart ...*command) error {
+	if len(onstart) > 0 {
+		for _, cmd := range onstart {
+			if err := app.executeCommand(cmd); err != nil {
+				fmt.Printf("[error]: %v\n", err)
+			}
+		}
+	}
 	rdr := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("> ")
@@ -38,7 +45,7 @@ func (app *app) Run() error {
 			fmt.Printf("[error]: %v\n", err)
 			continue
 		}
-		if err := executeCommand(cmd); err != nil {
+		if err := app.executeCommand(cmd); err != nil {
 			fmt.Printf("[error]: %v\n", err)
 			continue
 		}
@@ -69,7 +76,7 @@ func (app *app) parseCommand(s string) (*command, error) {
 	return found, nil
 }
 
-func executeCommand(cmd *command) error {
+func (app *app) executeCommand(cmd *command) error {
 	req := make(CliRequest)
 	for key, val := range cmd.params {
 		req[key] = val
