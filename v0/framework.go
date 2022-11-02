@@ -29,7 +29,11 @@ func (app *app) Run() error {
 			}
 			break
 		}
-		cmd, err := app.parseCommand(strings.TrimSpace(line))
+		line = strings.TrimSpace(line)
+		if line == "quit" || line == "exit" {
+			return nil
+		}
+		cmd, err := app.parseCommand(line)
 		if err != nil {
 			fmt.Printf("[error]: %v\n", err)
 			continue
@@ -69,6 +73,9 @@ func executeCommand(cmd *command) error {
 	req := make(CliRequest)
 	for key, val := range cmd.params {
 		req[key] = val
+	}
+	if cmd.params["command"] == "quit" || cmd.params["command"] == "exit" {
+		return nil
 	}
 	if cmd.controller == nil {
 		return fmt.Errorf("execute command %q: nil controller", req)
