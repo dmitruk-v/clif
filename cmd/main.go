@@ -9,9 +9,7 @@ import (
 
 func main() {
 	commands := clim.Commands{
-		clim.NewCommand(`^(?P<command>add) (?P<resource>\S+) (?P<login>\S+) (?P<password>\S+)$`, &CliBlaController{}),
-		clim.NewCommand(`^(?P<command>remove) (?P<resource>\S+)$`, nil),
-		clim.NewCommand(`^(?P<command>update) (?P<resource>\S+)$`, nil),
+		clim.NewCommand(`command:add resource:\S+ login:\S+ password:\S+`, &CliBlaController{}),
 	}
 	app := clim.NewApp(commands)
 	if err := app.Run(); err != nil {
