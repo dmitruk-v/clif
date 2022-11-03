@@ -8,26 +8,45 @@ import (
 	"strings"
 )
 
-type app struct {
-	commands []*command
+type App struct {
+	config  AppConfig
+	canQuit bool
+	plugins []Plugin
 }
 
-func NewApp(commands Commands) *app {
-	return &app{
-		commands: commands,
+func NewApp(cfg AppConfig) *App {
+	return &App{
+		config:  cfg,
+		canQuit: false,
+		plugins: cfg.Plugins,
 	}
 }
 
-func (app *app) Run(onstart ...*command) error {
-	if len(onstart) > 0 {
-		for _, cmd := range onstart {
+func (app *App) Config() AppConfig {
+	return app.config
+}
+
+func (app *App) Run() error {
+	// run plugins
+	for _, plug := range app.plugins {
+		if err := plug.Execute(app); err != nil {
+			return fmt.Errorf("[error]: %v", err)
+		}
+	}
+	// run on-start commands
+	if len(app.config.OnStart) > 0 {
+		for _, cmd := range app.config.OnStart {
 			if err := app.executeCommand(cmd); err != nil {
 				fmt.Printf("[error]: %v\n", err)
 			}
 		}
 	}
+	// run application loop
 	rdr := bufio.NewReader(os.Stdin)
 	for {
+		if app.canQuit {
+			break
+		}
 		fmt.Print("> ")
 		line, err := rdr.ReadString('\n')
 		if err != nil {
@@ -36,11 +55,7 @@ func (app *app) Run(onstart ...*command) error {
 			}
 			break
 		}
-		line = strings.TrimSpace(line)
-		if line == "quit" || line == "exit" {
-			return nil
-		}
-		cmd, err := app.parseCommand(line)
+		cmd, err := app.parseCommand(strings.TrimSpace(line))
 		if err != nil {
 			fmt.Printf("[error]: %v\n", err)
 			continue
@@ -53,9 +68,12 @@ func (app *app) Run(onstart ...*command) error {
 	return nil
 }
 
-func (app *app) parseCommand(s string) (*command, error) {
+func (app *App) parseCommand(s string) (*command, error) {
 	var found *command
-	for _, cmd := range app.commands {
+	if QuitCommand.rgx.MatchString(s) {
+		return QuitCommand, nil
+	}
+	for _, cmd := range app.config.Commands {
 		matches := cmd.rgx.FindStringSubmatch(s)
 		if matches == nil {
 			continue
@@ -76,12 +94,13 @@ func (app *app) parseCommand(s string) (*command, error) {
 	return found, nil
 }
 
-func (app *app) executeCommand(cmd *command) error {
+func (app *App) executeCommand(cmd *command) error {
 	req := make(map[string]string)
 	for key, val := range cmd.params {
 		req[key] = val
 	}
-	if cmd.params["command"] == "quit" || cmd.params["command"] == "exit" {
+	if cmd == QuitCommand {
+		app.canQuit = true
 		return nil
 	}
 	if cmd.controller == nil {

@@ -35,3 +35,5 @@ func NewCommand(pattern string, controller CliController) *command {
 		controller: controller,
 	}
 }
+
+var QuitCommand = NewCommand(`command:quit|exit`, nil)
