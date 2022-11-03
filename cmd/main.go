@@ -19,7 +19,7 @@ func main() {
 
 type CliBlaController struct{}
 
-func (ctrl *CliBlaController) Handle(req clim.CliRequest) error {
+func (ctrl *CliBlaController) Handle(req map[string]string) error {
 	fmt.Println(req)
 	return nil
 }

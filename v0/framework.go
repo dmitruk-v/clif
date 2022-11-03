@@ -77,7 +77,7 @@ func (app *app) parseCommand(s string) (*command, error) {
 }
 
 func (app *app) executeCommand(cmd *command) error {
-	req := make(CliRequest)
+	req := make(map[string]string)
 	for key, val := range cmd.params {
 		req[key] = val
 	}
