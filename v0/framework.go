@@ -22,48 +22,15 @@ func NewApp(cfg AppConfig) *App {
 	}
 }
 
-func (app *App) Config() AppConfig {
-	return app.config
-}
-
 func (app *App) Run() error {
-	// run plugins
-	for _, plug := range app.plugins {
-		if err := plug.Execute(app); err != nil {
-			return fmt.Errorf("[error]: %v", err)
-		}
+	if err := app.runPlugins(); err != nil {
+		return app.formatError(err)
 	}
-	// run on-start commands
-	if len(app.config.OnStart) > 0 {
-		for _, cmd := range app.config.OnStart {
-			if err := app.executeCommand(cmd); err != nil {
-				fmt.Printf("[error]: %v\n", err)
-			}
-		}
+	if err := app.runOnStart(); err != nil {
+		return app.formatError(err)
 	}
-	// run application loop
-	rdr := bufio.NewReader(os.Stdin)
-	for {
-		if app.canQuit {
-			break
-		}
-		fmt.Print("> ")
-		line, err := rdr.ReadString('\n')
-		if err != nil {
-			if err != io.EOF {
-				return err
-			}
-			break
-		}
-		cmd, err := app.parseCommand(strings.TrimSpace(line))
-		if err != nil {
-			fmt.Printf("[error]: %v\n", err)
-			continue
-		}
-		if err := app.executeCommand(cmd); err != nil {
-			fmt.Printf("[error]: %v\n", err)
-			continue
-		}
+	if err := app.runInputLoop(); err != nil {
+		return app.formatError(err)
 	}
 	return nil
 }
@@ -74,15 +41,12 @@ func (app *App) parseCommand(s string) (*command, error) {
 		return QuitCommand, nil
 	}
 	for _, cmd := range app.config.Commands {
+		names := cmd.rgx.SubexpNames()
 		matches := cmd.rgx.FindStringSubmatch(s)
 		if matches == nil {
 			continue
 		}
 		found = cmd
-		names := cmd.rgx.SubexpNames()
-		if len(matches) != len(names) {
-			return nil, fmt.Errorf("parse command: bad input for command %q: %v", matches[1], matches[2:])
-		}
 		found.params = make(map[string]string)
 		for i := 1; i < len(matches); i++ {
 			found.params[names[i]] = matches[i]
@@ -110,4 +74,59 @@ func (app *App) executeCommand(cmd *command) error {
 		return fmt.Errorf("execute command %q: %v", req, err)
 	}
 	return nil
+}
+
+func (app *App) runPlugins() error {
+	for _, plug := range app.plugins {
+		if err := plug.Execute(app); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (app *App) runOnStart() error {
+	if len(app.config.OnStart) > 0 {
+		for _, cmd := range app.config.OnStart {
+			if err := app.executeCommand(cmd); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (app *App) runInputLoop() error {
+	rdr := bufio.NewReader(os.Stdin)
+	for {
+		if app.canQuit {
+			return nil
+		}
+		fmt.Print("> ")
+		line, err := rdr.ReadString('\n')
+		if err != nil {
+			if err != io.EOF {
+				return err
+			}
+			break
+		}
+		cmd, err := app.parseCommand(strings.TrimSpace(line))
+		if err != nil {
+			app.printError(err)
+			continue
+		}
+		if err := app.executeCommand(cmd); err != nil {
+			app.printError(err)
+			continue
+		}
+	}
+	return nil
+}
+
+func (app *App) formatError(err error) error {
+	return fmt.Errorf("[ERROR]: %v", err)
+}
+
+func (app *App) printError(err error) {
+	fmt.Printf("[ERROR]: %v\n", err)
 }
