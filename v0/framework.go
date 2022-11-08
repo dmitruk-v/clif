@@ -11,24 +11,16 @@ import (
 type App struct {
 	config  AppConfig
 	canQuit bool
-	plugins []Plugin
 }
 
 func NewApp(cfg AppConfig) *App {
 	return &App{
 		config:  cfg,
 		canQuit: false,
-		plugins: cfg.Plugins,
 	}
 }
 
 func (app *App) Run() error {
-	if err := app.runPlugins(); err != nil {
-		return app.formatError(err)
-	}
-	if err := app.runOnStart(); err != nil {
-		return app.formatError(err)
-	}
 	if err := app.runInputLoop(); err != nil {
 		return app.formatError(err)
 	}
@@ -58,40 +50,20 @@ func (app *App) parseCommand(s string) (*command, error) {
 	return found, nil
 }
 
-func (app *App) executeCommand(cmd *command) error {
-	req := make(map[string]string)
-	for key, val := range cmd.params {
-		req[key] = val
-	}
+func (app *App) ExecuteCommand(cmd *command) error {
 	if cmd == QuitCommand {
 		app.canQuit = true
 		return nil
+	}
+	req := make(map[string]string)
+	for key, val := range cmd.params {
+		req[key] = val
 	}
 	if cmd.controller == nil {
 		return fmt.Errorf("execute command %q: nil controller", req)
 	}
 	if err := cmd.controller.Handle(req); err != nil {
 		return fmt.Errorf("execute command %q: %v", req, err)
-	}
-	return nil
-}
-
-func (app *App) runPlugins() error {
-	for _, plug := range app.plugins {
-		if err := plug.Execute(app); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (app *App) runOnStart() error {
-	if len(app.config.OnStart) > 0 {
-		for _, cmd := range app.config.OnStart {
-			if err := app.executeCommand(cmd); err != nil {
-				return err
-			}
-		}
 	}
 	return nil
 }
@@ -115,7 +87,7 @@ func (app *App) runInputLoop() error {
 			app.printError(err)
 			continue
 		}
-		if err := app.executeCommand(cmd); err != nil {
+		if err := app.ExecuteCommand(cmd); err != nil {
 			app.printError(err)
 			continue
 		}
