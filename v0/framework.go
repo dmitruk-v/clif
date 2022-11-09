@@ -21,13 +21,18 @@ func NewApp(cfg AppConfig) *App {
 }
 
 func (app *App) Run() error {
-	if err := app.runOnStart(); err != nil {
-		return app.formatError(err)
-	}
 	if err := app.runInputLoop(); err != nil {
 		return app.formatError(err)
 	}
-	if err := app.runOnQuit(); err != nil {
+	return nil
+}
+
+func (app *App) RunCommand(input string) error {
+	cmd, err := app.matchCommand(input)
+	if err != nil {
+		return app.formatError(err)
+	}
+	if err := app.executeCommand(cmd); err != nil {
 		return app.formatError(err)
 	}
 	return nil
@@ -96,24 +101,6 @@ func (app *App) runInputLoop() error {
 		if err := app.executeCommand(cmd); err != nil {
 			app.printError(err)
 			continue
-		}
-	}
-	return nil
-}
-
-func (app *App) runOnStart() error {
-	for _, cmd := range app.config.OnStart {
-		if err := app.executeCommand(cmd); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (app *App) runOnQuit() error {
-	for _, cmd := range app.config.OnQuit {
-		if err := app.executeCommand(cmd); err != nil {
-			return err
 		}
 	}
 	return nil

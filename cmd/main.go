@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/dmitruk-v/clim/cmd/controllers"
@@ -22,6 +23,9 @@ func main() {
 		Commands: commands,
 	}
 	app := clim.NewApp(cfg)
+	if err := app.RunCommand("- 100 usd"); err != nil {
+		fmt.Println(err)
+	}
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}

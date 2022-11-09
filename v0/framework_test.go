@@ -5,6 +5,34 @@ import (
 	"testing"
 )
 
+func TestRunCommandSuccess(t *testing.T) {
+	ctrl := &mockCliController{}
+	cfg := AppConfig{
+		Commands: Commands{
+			NewCommand(`command:first param1:\d+`, ctrl),
+			NewCommand(`command:\+ amount:\d+ currency:\w{3}`, ctrl),
+			NewCommand(`command:second|snd param1:\w+ param2:\d+`, ctrl),
+			NewCommand(`command:third|trd param1:\d+ param2:\w+ param3:1|2|3`, ctrl),
+			NewCommand(`command:fourth|fth param1:\d+ param2:\w+ param3:1|2|3 param4:\w{3}`, ctrl),
+			QuitCommand,
+		},
+	}
+	app := NewApp(cfg)
+	table := []string{
+		"first 123",
+		"+ 100 usd",
+		"snd one 123",
+		"trd 123 two 3",
+		"fourth 123 two 2 qqq",
+		"quit",
+	}
+	for _, input := range table {
+		if err := app.RunCommand(input); err != nil {
+			t.Errorf("got error: %v, want no errors", err)
+		}
+	}
+}
+
 func TestMatchCommandSuccess(t *testing.T) {
 	cfg := AppConfig{
 		Commands: Commands{
@@ -27,7 +55,7 @@ func TestMatchCommandSuccess(t *testing.T) {
 	}
 }
 
-func TestMatchCommandFail(t *testing.T) {
+func TestMatchCommandNotMatch(t *testing.T) {
 	cfg := AppConfig{
 		Commands: Commands{
 			NewCommand(`command:first param1:\d+`, nil),
@@ -94,6 +122,12 @@ func TestExecuteCommandSuccess(t *testing.T) {
 	if err := app.executeCommand(cmd); err != nil {
 		t.Errorf("got: error: %v, want: no errors", err)
 	}
+}
+
+type mockCliController struct{}
+
+func (ctrl *mockCliController) Handle(req map[string]string) error {
+	return nil
 }
 
 type stubCliController struct {
