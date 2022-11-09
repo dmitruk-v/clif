@@ -21,7 +21,12 @@ func NewCommand(pattern string, controller CliController) *command {
 	for i, pt := range parts {
 		namereg := strings.Split(pt, ":")
 		if len(namereg) != 2 {
-			panic(fmt.Sprintf("wrong syntax in pattern %v", pattern))
+			panic(fmt.Errorf(`wrong syntax in pattern %q, missing colon: %v`, pattern, namereg))
+		}
+		if i == 0 {
+			if namereg[0] != "command" {
+				panic(fmt.Errorf(`wrong syntax in pattern %q, first part must be "command:name", got %q`, pattern, namereg))
+			}
 		}
 		if i > 0 {
 			result += " "

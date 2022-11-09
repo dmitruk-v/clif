@@ -21,13 +21,19 @@ func NewApp(cfg AppConfig) *App {
 }
 
 func (app *App) Run() error {
+	if err := app.runOnStart(); err != nil {
+		return app.formatError(err)
+	}
 	if err := app.runInputLoop(); err != nil {
+		return app.formatError(err)
+	}
+	if err := app.runOnQuit(); err != nil {
 		return app.formatError(err)
 	}
 	return nil
 }
 
-func (app *App) parseCommand(s string) (*command, error) {
+func (app *App) matchCommand(s string) (*command, error) {
 	var found *command
 	if QuitCommand.rgx.MatchString(s) {
 		return QuitCommand, nil
@@ -45,12 +51,12 @@ func (app *App) parseCommand(s string) (*command, error) {
 		}
 	}
 	if found == nil {
-		return nil, fmt.Errorf("parse command: no match for input %q", s)
+		return nil, fmt.Errorf("match command: no match for input %q", s)
 	}
 	return found, nil
 }
 
-func (app *App) ExecuteCommand(cmd *command) error {
+func (app *App) executeCommand(cmd *command) error {
 	if cmd == QuitCommand {
 		app.canQuit = true
 		return nil
@@ -60,10 +66,10 @@ func (app *App) ExecuteCommand(cmd *command) error {
 		req[key] = val
 	}
 	if cmd.controller == nil {
-		return fmt.Errorf("execute command %q: nil controller", req)
+		return fmt.Errorf("execute command %q: nil controller", cmd.params["command"])
 	}
 	if err := cmd.controller.Handle(req); err != nil {
-		return fmt.Errorf("execute command %q: %v", req, err)
+		return fmt.Errorf("execute command %q: %v", cmd.params["command"], err)
 	}
 	return nil
 }
@@ -82,14 +88,32 @@ func (app *App) runInputLoop() error {
 			}
 			break
 		}
-		cmd, err := app.parseCommand(strings.TrimSpace(line))
+		cmd, err := app.matchCommand(strings.TrimSpace(line))
 		if err != nil {
 			app.printError(err)
 			continue
 		}
-		if err := app.ExecuteCommand(cmd); err != nil {
+		if err := app.executeCommand(cmd); err != nil {
 			app.printError(err)
 			continue
+		}
+	}
+	return nil
+}
+
+func (app *App) runOnStart() error {
+	for _, cmd := range app.config.OnStart {
+		if err := app.executeCommand(cmd); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (app *App) runOnQuit() error {
+	for _, cmd := range app.config.OnQuit {
+		if err := app.executeCommand(cmd); err != nil {
+			return err
 		}
 	}
 	return nil

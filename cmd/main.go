@@ -5,23 +5,23 @@ import (
 
 	"github.com/dmitruk-v/clim/cmd/controllers"
 	"github.com/dmitruk-v/clim/v0"
+	"github.com/dmitruk-v/clim/v0/auth"
 )
 
 func main() {
+	_, err := auth.NewAuthenticator().SignIn()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	commands := clim.Commands{
-		clim.NewCommand(`command:bla`, controllers.NewCliBlaController()),
-		clim.NewCommand(`command:add resource:\S+ login:\S+ password:\S+`, nil),
-		clim.NewCommand(`command:add resource:\w+ password:\d+`, nil),
-		clim.NewCommand(`command:add resource:\d+ password:\w+`, nil),
+		clim.NewCommand(`command:\+ amount:\d+ currency:\w{3}`, controllers.NewCliBlaController()),
 		clim.QuitCommand,
 	}
 	cfg := clim.AppConfig{
 		Commands: commands,
 	}
 	app := clim.NewApp(cfg)
-	if err := app.ExecuteCommand(commands[0]); err != nil {
-		log.Fatal(err)
-	}
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}
