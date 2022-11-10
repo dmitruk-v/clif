@@ -5,6 +5,19 @@ import (
 	"testing"
 )
 
+func TestNoCommands(t *testing.T) {
+	cfg := AppConfig{
+		Commands: Commands{},
+	}
+	app := NewApp(cfg)
+	if err := app.RunCommand("whatever command"); err == nil {
+		t.Errorf("got: no errors, want error: no commands")
+	}
+	if err := app.Run(); err == nil {
+		t.Errorf("got: no errors, want error: no commands")
+	}
+}
+
 func TestRunCommandSuccess(t *testing.T) {
 	ctrl := &mockCliController{}
 	cfg := AppConfig{
@@ -14,7 +27,7 @@ func TestRunCommandSuccess(t *testing.T) {
 			NewCommand(`command:second|snd param1:\w+ param2:\d+`, ctrl),
 			NewCommand(`command:third|trd param1:\d+ param2:\w+ param3:1|2|3`, ctrl),
 			NewCommand(`command:fourth|fth param1:\d+ param2:\w+ param3:1|2|3 param4:\w{3}`, ctrl),
-			QuitCommand,
+			NewQuitCommand(`command:quit|exit`),
 		},
 	}
 	app := NewApp(cfg)
@@ -39,7 +52,7 @@ func TestMatchCommandSuccess(t *testing.T) {
 			NewCommand(`command:first param1:\d+`, nil),
 			NewCommand(`command:second|snd param1:\w+ param2:\d+`, nil),
 			NewCommand(`command:third|trd param1:\d+ param2:\w+ param3:1|2|3`, nil),
-			QuitCommand,
+			NewQuitCommand(`command:quit|exit`),
 		},
 	}
 	app := NewApp(cfg)
@@ -61,11 +74,11 @@ func TestMatchCommandNotMatch(t *testing.T) {
 			NewCommand(`command:first param1:\d+`, nil),
 			NewCommand(`command:second|snd param1:\w+ param2:\d+`, nil),
 			NewCommand(`command:third|trd param1:\d+ param2:\w+ param3:1|2|3`, nil),
-			QuitCommand,
+			NewQuitCommand(`command:quit|exit`),
 		},
 	}
 	app := NewApp(cfg)
-	table := []string{"frst 123", "second|snd one 123", "trd onetwothree two 3"}
+	table := []string{"frst 123", "second|snd one 123", "trd onetwothree two 3", "qexit"}
 	for _, input := range table {
 		_, err := app.matchCommand(input)
 		if err == nil {
@@ -100,7 +113,7 @@ func TestExecuteCommandControllerError(t *testing.T) {
 
 func TestExecuteCommandQuit(t *testing.T) {
 	app := NewApp(AppConfig{})
-	if err := app.executeCommand(QuitCommand); err != nil {
+	if err := app.executeCommand(NewQuitCommand(`command:quit|exit`)); err != nil {
 		t.Errorf("got: %v, want: no errors", err)
 	}
 	if app.canQuit != true {

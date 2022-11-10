@@ -6,9 +6,17 @@ import (
 	"strings"
 )
 
+type commandType int
+
+const (
+	QuitCommand commandType = iota
+	UserCommand
+)
+
 type Commands []*command
 
 type command struct {
+	ctype      commandType
 	pattern    string
 	rgx        *regexp.Regexp
 	params     map[string]string
@@ -19,7 +27,7 @@ func NewCommand(pattern string, controller CliController) *command {
 	parts := strings.Split(pattern, " ")
 	result := "^"
 	for i, pt := range parts {
-		namereg := strings.Split(pt, ":")
+		namereg := strings.SplitN(pt, ":", 2)
 		if len(namereg) != 2 {
 			panic(fmt.Errorf(`wrong syntax in pattern %q, missing colon: %v`, pattern, namereg))
 		}
@@ -35,12 +43,15 @@ func NewCommand(pattern string, controller CliController) *command {
 	}
 	result += "$"
 	return &command{
+		ctype:      UserCommand,
 		pattern:    result,
 		rgx:        regexp.MustCompile(result),
 		controller: controller,
 	}
 }
 
-var (
-	QuitCommand = NewCommand(`command:quit|exit`, nil)
-)
+func NewQuitCommand(pattern string) *command {
+	cmd := NewCommand(pattern, nil)
+	cmd.ctype = QuitCommand
+	return cmd
+}

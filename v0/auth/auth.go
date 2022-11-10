@@ -62,7 +62,7 @@ func (au *authenticator) signUp() error {
 
 func (au *authenticator) SignIn() ([]byte, error) {
 	formatError := func(err error) error {
-		return fmt.Errorf("signing in: %v", err)
+		return fmt.Errorf("[ERROR]: signing in: %v", err)
 	}
 	if _, err := os.Stat(au.cfgpath); err != nil {
 		if err := au.signUp(); err != nil {

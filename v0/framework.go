@@ -8,26 +8,32 @@ import (
 	"strings"
 )
 
-type App struct {
+type app struct {
 	config  AppConfig
 	canQuit bool
 }
 
-func NewApp(cfg AppConfig) *App {
-	return &App{
+func NewApp(cfg AppConfig) *app {
+	return &app{
 		config:  cfg,
 		canQuit: false,
 	}
 }
 
-func (app *App) Run() error {
+func (app *app) Run() error {
+	if len(app.config.Commands) == 0 {
+		return ErrNoCommands
+	}
 	if err := app.runInputLoop(); err != nil {
 		return app.formatError(err)
 	}
 	return nil
 }
 
-func (app *App) RunCommand(input string) error {
+func (app *app) RunCommand(input string) error {
+	if len(app.config.Commands) == 0 {
+		return ErrNoCommands
+	}
 	cmd, err := app.matchCommand(input)
 	if err != nil {
 		return app.formatError(err)
@@ -38,11 +44,8 @@ func (app *App) RunCommand(input string) error {
 	return nil
 }
 
-func (app *App) matchCommand(s string) (*command, error) {
+func (app *app) matchCommand(s string) (*command, error) {
 	var found *command
-	if QuitCommand.rgx.MatchString(s) {
-		return QuitCommand, nil
-	}
 	for _, cmd := range app.config.Commands {
 		names := cmd.rgx.SubexpNames()
 		matches := cmd.rgx.FindStringSubmatch(s)
@@ -61,8 +64,8 @@ func (app *App) matchCommand(s string) (*command, error) {
 	return found, nil
 }
 
-func (app *App) executeCommand(cmd *command) error {
-	if cmd == QuitCommand {
+func (app *app) executeCommand(cmd *command) error {
+	if cmd.ctype == QuitCommand {
 		app.canQuit = true
 		return nil
 	}
@@ -79,7 +82,7 @@ func (app *App) executeCommand(cmd *command) error {
 	return nil
 }
 
-func (app *App) runInputLoop() error {
+func (app *app) runInputLoop() error {
 	rdr := bufio.NewReader(os.Stdin)
 	for {
 		if app.canQuit {
@@ -106,10 +109,10 @@ func (app *App) runInputLoop() error {
 	return nil
 }
 
-func (app *App) formatError(err error) error {
+func (app *app) formatError(err error) error {
 	return fmt.Errorf("[ERROR]: %v", err)
 }
 
-func (app *App) printError(err error) {
+func (app *app) printError(err error) {
 	fmt.Printf("[ERROR]: %v\n", err)
 }
