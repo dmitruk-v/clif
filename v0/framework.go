@@ -83,18 +83,18 @@ func (app *app) executeCommand(cmd *command) error {
 }
 
 func (app *app) runInputLoop() error {
-	rdr := bufio.NewReader(os.Stdin)
+	r := bufio.NewReader(os.Stdin)
 	for {
 		if app.canQuit {
 			return nil
 		}
 		fmt.Print("> ")
-		line, err := rdr.ReadString('\n')
+		line, err := r.ReadString('\n')
 		if err != nil {
-			if err != io.EOF {
-				return err
+			if err == io.EOF {
+				return nil
 			}
-			break
+			return err
 		}
 		cmd, err := app.matchCommand(strings.TrimSpace(line))
 		if err != nil {
@@ -106,7 +106,6 @@ func (app *app) runInputLoop() error {
 			continue
 		}
 	}
-	return nil
 }
 
 func (app *app) formatError(err error) error {
