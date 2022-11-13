@@ -12,8 +12,24 @@ import (
 	"golang.org/x/term"
 )
 
+type User struct {
+	Login    string
+	Password string
+}
+
+type registerCredentials struct {
+	login       string
+	password    string
+	passwordRep string
+}
+
+type loginCredentials struct {
+	login    string
+	password string
+}
+
 type authenticator struct {
-	cfgpath string
+	usersStorage usersStorage
 }
 
 func NewAuthenticator() *authenticator {
@@ -21,82 +37,170 @@ func NewAuthenticator() *authenticator {
 	if err != nil {
 		panic(err)
 	}
-	cfgpath := path.Join(path.Dir(exepath), "auth.ini")
+	dbpath := path.Join(path.Dir(exepath), "auth.json")
+	if _, err := os.Stat(dbpath); err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			panic(err)
+		}
+		if err := os.WriteFile(dbpath, nil, 0600); err != nil {
+			panic(err)
+		}
+	}
 	return &authenticator{
-		cfgpath: cfgpath,
+		usersStorage: &usersStorageImpl{
+			dbpath: dbpath,
+		},
 	}
 }
 
-func (au *authenticator) IsRegistered() bool {
-	if _, err := os.Stat(au.cfgpath); err != nil {
-		return false
-	}
-	return true
-}
-
-func (au *authenticator) SignIn() ([]byte, error) {
-	formatError := func(err error) error {
-		return fmt.Errorf("[ERROR]: sign in: %v", err)
-	}
-	hash, err := os.ReadFile(au.cfgpath)
+func (au *authenticator) Run() (*User, error) {
+	fmt.Println("---------------------------------")
+	fmt.Println("Authentication menu")
+	fmt.Println("---------------------------------")
+	fmt.Println("1. Register new user")
+	fmt.Println("2. Login")
+	r := bufio.NewReader(os.Stdin)
+	fmt.Print("> ")
+	num, err := r.ReadString('\n')
 	if err != nil {
-		return nil, formatError(err)
+		return nil, err
 	}
-	fmt.Println("Please enter a password:")
-	password, err := term.ReadPassword(0)
+	var user *User
+	switch strings.TrimSpace(num) {
+	case "1":
+		user, err = au.Register()
+	case "2":
+		user, err = au.Login()
+	default:
+		return nil, errors.New("bad action")
+	}
 	if err != nil {
-		return nil, formatError(err)
+		return nil, err
 	}
-	if err := bcrypt.CompareHashAndPassword(hash, password); err != nil {
-		return nil, formatError(errors.New("wrong password"))
-	}
-	return password, nil
+	return user, nil
 }
 
-func (au *authenticator) Register() ([]byte, error) {
+func (au *authenticator) Register() (*User, error) {
 	formatError := func(err error) error {
 		return fmt.Errorf("[ERROR]: register: %v", err)
 	}
 	fmt.Println("---------------------------------")
-	fmt.Println("This is the first authentication.")
+	fmt.Println("New user registration")
 	fmt.Println("---------------------------------")
-	fmt.Println("Please create your password...")
-	password, err := au.createPassword()
+	creds, err := au.askRegisterCreds()
 	if err != nil {
 		return nil, formatError(err)
 	}
-	fmt.Println("Generating hash...")
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	fmt.Println("--- *** ---")
+	user, err := au.registerAction(creds)
 	if err != nil {
-		return nil, formatError(err)
-	}
-	fmt.Println("Creating config file...")
-	if err := os.WriteFile(au.cfgpath, hash, 0400); err != nil {
 		return nil, formatError(err)
 	}
 	fmt.Println("Done!")
 	fmt.Println("---------------------------------")
-	return []byte(password), nil
+	return user, nil
+}
+
+func (au *authenticator) Login() (*User, error) {
+	formatError := func(err error) error {
+		return fmt.Errorf("[ERROR]: login: %v", err)
+	}
+	creds, err := au.askLoginCreds()
+	if err != nil {
+		return nil, formatError(err)
+	}
+	user, err := au.loginAction(creds)
+	if err != nil {
+		return nil, formatError(err)
+	}
+	return user, nil
 }
 
 func (au *authenticator) Unregister() error {
-	return os.Remove(au.cfgpath)
+	panic("not implemented")
 }
 
-func (au *authenticator) createPassword() (string, error) {
+func (au *authenticator) registerAction(creds registerCredentials) (*User, error) {
+	fmt.Println("Checking passwords...")
+	if creds.password != creds.passwordRep {
+		return nil, ErrPasswordsNotEqual
+	}
+	fmt.Println("Generating hash...")
+	hash, err := bcrypt.GenerateFromPassword([]byte(creds.password), 12)
+	if err != nil {
+		return nil, err
+	}
+	dbuser := &dbUser{
+		Login: creds.login,
+		Hash:  string(hash),
+	}
+	fmt.Println("Saving user...")
+	if err := au.usersStorage.save(dbuser); err != nil {
+		return nil, err
+	}
+	user := &User{
+		Login:    creds.login,
+		Password: creds.password,
+	}
+	return user, nil
+}
+
+func (au *authenticator) loginAction(creds loginCredentials) (*User, error) {
+	dbuser, err := au.usersStorage.getByLogin(creds.login)
+	if err != nil {
+		return nil, err
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(dbuser.Hash), []byte(creds.password)); err != nil {
+		return nil, ErrBadCredentials
+	}
+	user := &User{
+		Login:    creds.login,
+		Password: creds.password,
+	}
+	return user, nil
+}
+
+func (au *authenticator) askRegisterCreds() (registerCredentials, error) {
+	var creds registerCredentials
 	r := bufio.NewReader(os.Stdin)
+	fmt.Print("Login: ")
+	login, err := r.ReadString('\n')
+	if err != nil {
+		return creds, err
+	}
 	fmt.Print("Password: ")
-	password, err := r.ReadString('\n')
+	password, err := term.ReadPassword(0)
 	if err != nil {
-		return "", err
+		return creds, err
 	}
-	fmt.Print("Repeat: ")
-	passwordRep, err := r.ReadString('\n')
+	fmt.Println()
+	fmt.Print("Repeat password: ")
+	passwordRep, err := term.ReadPassword(0)
 	if err != nil {
-		return "", err
+		return creds, err
 	}
-	if password != passwordRep {
-		return "", errors.New("passwords are not equal")
+	fmt.Println()
+	creds.login = strings.TrimSpace(login)
+	creds.password = strings.TrimSpace(string(password))
+	creds.passwordRep = strings.TrimSpace(string(passwordRep))
+	return creds, nil
+}
+
+func (au *authenticator) askLoginCreds() (loginCredentials, error) {
+	var creds loginCredentials
+	r := bufio.NewReader(os.Stdin)
+	fmt.Print("Login: ")
+	login, err := r.ReadString('\n')
+	if err != nil {
+		return creds, err
 	}
-	return strings.TrimSpace(password), nil
+	fmt.Print("Password: ")
+	password, err := term.ReadPassword(0)
+	if err != nil {
+		return creds, err
+	}
+	fmt.Println()
+	creds.login = strings.TrimSpace(login)
+	creds.password = strings.TrimSpace(string(password))
+	return creds, nil
 }
