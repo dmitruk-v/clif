@@ -5,18 +5,9 @@ import (
 	"log"
 
 	"github.com/dmitruk-v/clim/v0"
-	"github.com/dmitruk-v/clim/v0/auth"
 )
 
 func main() {
-	au := auth.NewAuthenticator()
-	user, err := au.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
-	_ = user
-	// ----------------------------------
-
 	cfg := clim.AppConfig{
 		Commands: clim.Commands{
 			clim.NewCommand(`command:\+ amount:\d+ currency:\w{3}`, &depositController{}),
