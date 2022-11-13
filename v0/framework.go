@@ -1,4 +1,4 @@
-package clim
+package clif
 
 import (
 	"bufio"

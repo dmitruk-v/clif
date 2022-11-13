@@ -1,4 +1,4 @@
-package clim
+package clif
 
 type AppConfig struct {
 	Commands Commands

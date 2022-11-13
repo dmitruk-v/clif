@@ -1,4 +1,4 @@
-package clim
+package clif
 
 type CliController interface {
 	Handle(req map[string]string) error

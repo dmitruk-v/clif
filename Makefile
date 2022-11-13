@@ -1,2 +1,2 @@
 run:
-	go build -o ./bin/clim ./cmd/main.go && ./bin/clim
+	go build -o ./bin/clif ./cmd/main.go && ./bin/clif

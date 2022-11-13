@@ -1,25 +1,25 @@
-# Clim
-Clim is a small and simple framework to build CLI-based applications
+# Clif
+Clif is a small and simple framework to build CLI-based applications
 
 ## How to use
 Basic example:
 
 ```go
 import (
-  "github.com/dmitruk-v/clim/v0"
+  "github.com/dmitruk-v/clif/v0"
 )
 
 func main() {
-  cfg := clim.AppConfig{
-		Commands: clim.Commands{
-			clim.NewCommand(`command:\+ amount:\d+ currency:\w{3}`, &depositController{}),
-			clim.NewQuitCommand(`command:quit|exit`),
-		},
-	}
-	app := clim.NewApp(cfg)
-	if err := app.Run(); err != nil {
-		log.Fatal(err)
-	}
+  cfg := clif.AppConfig{
+    Commands: clif.Commands{
+      clif.NewCommand(`command:\+ amount:\d+ currency:\w{3}`, &depositController{}),
+      clif.NewQuitCommand(`command:quit|exit`),
+    },
+  }
+  app := clif.NewApp(cfg)
+  if err := app.Run(); err != nil {
+    log.Fatal(err)
+  }
 }
 
 type depositController struct{}
