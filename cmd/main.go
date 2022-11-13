@@ -9,25 +9,17 @@ import (
 )
 
 func main() {
-	var (
-		password []byte
-		err      error
-	)
 	au := auth.NewAuthenticator()
-	if au.IsRegistered() {
-		if password, err = au.SignIn(); err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		if password, err = au.Register(); err != nil {
-			log.Fatal(err)
-		}
+	user, err := au.Run()
+	if err != nil {
+		log.Fatal(err)
 	}
-	_ = password
+	_ = user
+	// ----------------------------------
 
 	cfg := clim.AppConfig{
 		Commands: clim.Commands{
-			clim.NewCommand(`command:\+ amount:\d+ currency:\w{3}`, NewDepositController()),
+			clim.NewCommand(`command:\+ amount:\d+ currency:\w{3}`, &depositController{}),
 			clim.NewQuitCommand(`command:quit|exit`),
 		},
 	}
@@ -38,10 +30,6 @@ func main() {
 }
 
 type depositController struct{}
-
-func NewDepositController() *depositController {
-	return &depositController{}
-}
 
 func (ctrl *depositController) Handle(req map[string]string) error {
 	fmt.Println("deposit controller got request:", req)
