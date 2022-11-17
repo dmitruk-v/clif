@@ -12,8 +12,15 @@ import (
 func main() {
   cfg := clif.AppConfig{
     Commands: clif.Commands{
-      clif.NewCommand(`command:\+ amount:\d+ currency:\w{3}`, &depositController{}),
-      clif.NewQuitCommand(`command:quit|exit`),
+      clif.NewCommand(`command:\+ amount:\d+ currency:\w{3}`, &depositController{}, clif.CommandHelp{
+        Info:  "Deposit some amount of currency to balance:",
+        Usage: []string{
+          "+ AMOUNT CURRENCY",
+        },
+        Examples: []string{
+          "+ 100 usd   Adds 100 USD to balance",
+        },
+      }),
     },
   }
   app := clif.NewApp(cfg)

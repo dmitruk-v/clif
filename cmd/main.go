@@ -15,8 +15,6 @@ func main() {
 				Usage: []string{"+ AMOUNT CURRENCY"},
 				Examples: []string{
 					"+ 100 usd     Add 100 USD",
-					"+ 999 uah     Add 999 UAH",
-					"+ 10000 eur   Add 10000 EURO",
 				},
 			}),
 		},
