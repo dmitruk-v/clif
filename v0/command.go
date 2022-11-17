@@ -9,7 +9,9 @@ import (
 type commandType int
 
 const (
-	QuitCommand commandType = iota
+	Unknown commandType = iota
+	QuitCommand
+	HelpCommand
 	UserCommand
 )
 
@@ -53,5 +55,11 @@ func NewCommand(pattern string, controller CliController) *command {
 func NewQuitCommand(pattern string) *command {
 	cmd := NewCommand(pattern, nil)
 	cmd.ctype = QuitCommand
+	return cmd
+}
+
+func NewHelpCommand(pattern string) *command {
+	cmd := NewCommand(pattern, nil)
+	cmd.ctype = HelpCommand
 	return cmd
 }

@@ -12,9 +12,14 @@ func main() {
 		Commands: clif.Commands{
 			clif.NewCommand(`command:\+ amount:\d+ currency:\w{3}`, &depositController{}),
 			clif.NewQuitCommand(`command:quit|exit`),
+			clif.NewHelpCommand(`command:help`),
 		},
+		HelpFile: "./help.inf",
 	}
 	app := clif.NewApp(cfg)
+	if err := app.RunCommand("help"); err != nil {
+		log.Fatal(err)
+	}
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}

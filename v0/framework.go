@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"strings"
 )
 
@@ -69,6 +70,9 @@ func (app *app) executeCommand(cmd *command) error {
 		app.canQuit = true
 		return nil
 	}
+	if cmd.ctype == HelpCommand {
+		return app.showHelp()
+	}
 	req := make(map[string]string)
 	for key, val := range cmd.params {
 		req[key] = val
@@ -106,6 +110,22 @@ func (app *app) runInputLoop() error {
 			continue
 		}
 	}
+}
+
+func (app *app) showHelp() error {
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	if app.config.HelpFile == "" {
+		return fmt.Errorf("help file not added to config")
+	}
+	data, err := os.ReadFile(path.Join(path.Dir(exe), app.config.HelpFile))
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(data))
+	return nil
 }
 
 func (app *app) formatError(err error) error {
