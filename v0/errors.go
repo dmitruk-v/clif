@@ -5,5 +5,5 @@ import (
 )
 
 var (
-	ErrNoCommands = errors.New("there are no commands defined")
+	ErrNoUserCommands = errors.New("there are no user commands defined")
 )

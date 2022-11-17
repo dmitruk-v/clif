@@ -22,12 +22,12 @@ func TestRunCommandSuccess(t *testing.T) {
 	ctrl := &mockCliController{}
 	cfg := AppConfig{
 		Commands: Commands{
-			NewCommand(`command:first param1:\d+`, ctrl),
-			NewCommand(`command:\+ amount:\d+ currency:\w{3}`, ctrl),
-			NewCommand(`command:second|snd param1:\w+ param2:\d+`, ctrl),
-			NewCommand(`command:third|trd param1:\d+ param2:\w+ param3:1|2|3`, ctrl),
-			NewCommand(`command:fourth|fth param1:\d+ param2:\w+ param3:1|2|3 param4:\w{3}`, ctrl),
-			NewQuitCommand(`command:quit|exit`),
+			NewCommand(`command:first param1:\d+`, ctrl, CommandHelp{}),
+			NewCommand(`command:\+ amount:\d+ currency:\w{3}`, ctrl, CommandHelp{}),
+			NewCommand(`command:second|snd param1:\w+ param2:\d+`, ctrl, CommandHelp{}),
+			NewCommand(`command:third|trd param1:\d+ param2:\w+ param3:1|2|3`, ctrl, CommandHelp{}),
+			NewCommand(`command:fourth|fth param1:\d+ param2:\w+ param3:1|2|3 param4:\w{3}`, ctrl, CommandHelp{}),
+			quitCommand,
 		},
 	}
 	app := NewApp(cfg)
@@ -49,10 +49,10 @@ func TestRunCommandSuccess(t *testing.T) {
 func TestMatchCommandSuccess(t *testing.T) {
 	cfg := AppConfig{
 		Commands: Commands{
-			NewCommand(`command:first param1:\d+`, nil),
-			NewCommand(`command:second|snd param1:\w+ param2:\d+`, nil),
-			NewCommand(`command:third|trd param1:\d+ param2:\w+ param3:1|2|3`, nil),
-			NewQuitCommand(`command:quit|exit`),
+			NewCommand(`command:first param1:\d+`, nil, CommandHelp{}),
+			NewCommand(`command:second|snd param1:\w+ param2:\d+`, nil, CommandHelp{}),
+			NewCommand(`command:third|trd param1:\d+ param2:\w+ param3:1|2|3`, nil, CommandHelp{}),
+			quitCommand,
 		},
 	}
 	app := NewApp(cfg)
@@ -71,10 +71,9 @@ func TestMatchCommandSuccess(t *testing.T) {
 func TestMatchCommandNotMatch(t *testing.T) {
 	cfg := AppConfig{
 		Commands: Commands{
-			NewCommand(`command:first param1:\d+`, nil),
-			NewCommand(`command:second|snd param1:\w+ param2:\d+`, nil),
-			NewCommand(`command:third|trd param1:\d+ param2:\w+ param3:1|2|3`, nil),
-			NewQuitCommand(`command:quit|exit`),
+			NewCommand(`command:first param1:\d+`, nil, CommandHelp{}),
+			NewCommand(`command:second|snd param1:\w+ param2:\d+`, nil, CommandHelp{}),
+			NewCommand(`command:third|trd param1:\d+ param2:\w+ param3:1|2|3`, nil, CommandHelp{}),
 		},
 	}
 	app := NewApp(cfg)
@@ -89,7 +88,7 @@ func TestMatchCommandNotMatch(t *testing.T) {
 
 func TestExecuteCommandNilController(t *testing.T) {
 	app := NewApp(AppConfig{})
-	cmd := NewCommand("command:whatever", nil)
+	cmd := NewCommand("command:whatever", nil, CommandHelp{})
 	cmd.params = map[string]string{
 		"command": "whatever",
 	}
@@ -104,7 +103,7 @@ func TestExecuteCommandControllerError(t *testing.T) {
 	}
 	ctrl := &stubCliController{t: t, testParams: testParams}
 	app := NewApp(AppConfig{})
-	cmd := NewCommand("command:whatever", ctrl)
+	cmd := NewCommand("command:whatever", ctrl, CommandHelp{})
 	cmd.params = testParams
 	if err := app.executeCommand(cmd); err == nil {
 		t.Errorf("got: no errors, want: controller handler error")
@@ -113,7 +112,7 @@ func TestExecuteCommandControllerError(t *testing.T) {
 
 func TestExecuteCommandQuit(t *testing.T) {
 	app := NewApp(AppConfig{})
-	if err := app.executeCommand(NewQuitCommand(`command:quit|exit`)); err != nil {
+	if err := app.executeCommand(quitCommand); err != nil {
 		t.Errorf("got: %v, want: no errors", err)
 	}
 	if app.canQuit != true {
@@ -130,7 +129,7 @@ func TestExecuteCommandSuccess(t *testing.T) {
 	}
 	ctrl := &stubCliController{t: t, testParams: testParams}
 	app := NewApp(AppConfig{})
-	cmd := NewCommand("command:whatever", ctrl)
+	cmd := NewCommand("command:whatever", ctrl, CommandHelp{})
 	cmd.params = testParams
 	if err := app.executeCommand(cmd); err != nil {
 		t.Errorf("got: error: %v, want: no errors", err)

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"strings"
 )
 
@@ -15,6 +14,7 @@ type app struct {
 }
 
 func NewApp(cfg AppConfig) *app {
+	cfg.Commands = append(cfg.Commands, helpCommand, quitCommand)
 	return &app{
 		config:  cfg,
 		canQuit: false,
@@ -22,8 +22,8 @@ func NewApp(cfg AppConfig) *app {
 }
 
 func (app *app) Run() error {
-	if len(app.config.Commands) == 0 {
-		return ErrNoCommands
+	if len(app.config.Commands) == 2 {
+		return ErrNoUserCommands
 	}
 	if err := app.runInputLoop(); err != nil {
 		return app.formatError(err)
@@ -32,8 +32,8 @@ func (app *app) Run() error {
 }
 
 func (app *app) RunCommand(input string) error {
-	if len(app.config.Commands) == 0 {
-		return ErrNoCommands
+	if len(app.config.Commands) == 2 {
+		return ErrNoUserCommands
 	}
 	cmd, err := app.matchCommand(input)
 	if err != nil {
@@ -113,18 +113,23 @@ func (app *app) runInputLoop() error {
 }
 
 func (app *app) showHelp() error {
-	exe, err := os.Executable()
-	if err != nil {
-		return err
+	var help string
+	for _, cmd := range app.config.Commands {
+		cmdhelp := fmt.Sprintf("\n%s\n", cmd.help.Info)
+		if cmd.help.Usage != nil {
+			for _, usage := range cmd.help.Usage {
+				cmdhelp += fmt.Sprintf("  %v\n", usage)
+			}
+		}
+		if cmd.help.Examples != nil {
+			cmdhelp += "Examples:\n"
+			for _, ex := range cmd.help.Examples {
+				cmdhelp += fmt.Sprintf("  %v\n", ex)
+			}
+		}
+		help += cmdhelp
 	}
-	if app.config.HelpFile == "" {
-		return fmt.Errorf("help file not added to config")
-	}
-	data, err := os.ReadFile(path.Join(path.Dir(exe), app.config.HelpFile))
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(data))
+	fmt.Println(help)
 	return nil
 }
 
