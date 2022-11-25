@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"strings"
+
+	"github.com/inancgumus/screen"
 )
 
 type app struct {
@@ -25,6 +27,7 @@ func (app *app) Run() error {
 	if len(app.config.Commands) == 2 {
 		return ErrNoUserCommands
 	}
+	app.clearConsole()
 	if err := app.runInputLoop(); err != nil {
 		return app.formatError(err)
 	}
@@ -43,6 +46,33 @@ func (app *app) RunCommand(input string) error {
 		return app.formatError(err)
 	}
 	return nil
+}
+
+func (app *app) runInputLoop() error {
+	defer app.clearConsole()
+	r := bufio.NewReader(os.Stdin)
+	for {
+		if app.canQuit {
+			return nil
+		}
+		fmt.Print("> ")
+		line, err := r.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+		cmd, err := app.matchCommand(strings.TrimSpace(line))
+		if err != nil {
+			app.printError(err)
+			continue
+		}
+		if err := app.executeCommand(cmd); err != nil {
+			app.printError(err)
+			continue
+		}
+	}
 }
 
 func (app *app) matchCommand(s string) (*command, error) {
@@ -86,32 +116,6 @@ func (app *app) executeCommand(cmd *command) error {
 	return nil
 }
 
-func (app *app) runInputLoop() error {
-	r := bufio.NewReader(os.Stdin)
-	for {
-		if app.canQuit {
-			return nil
-		}
-		fmt.Print("> ")
-		line, err := r.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				return nil
-			}
-			return err
-		}
-		cmd, err := app.matchCommand(strings.TrimSpace(line))
-		if err != nil {
-			app.printError(err)
-			continue
-		}
-		if err := app.executeCommand(cmd); err != nil {
-			app.printError(err)
-			continue
-		}
-	}
-}
-
 func (app *app) showHelp() error {
 	var help string
 	for _, cmd := range app.config.Commands {
@@ -131,6 +135,11 @@ func (app *app) showHelp() error {
 	}
 	fmt.Println(help)
 	return nil
+}
+
+func (app *app) clearConsole() {
+	screen.Clear()
+	screen.MoveTopLeft()
 }
 
 func (app *app) formatError(err error) error {
