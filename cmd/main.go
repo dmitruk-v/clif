@@ -8,21 +8,20 @@ import (
 )
 
 func main() {
+	commands := clif.Commands{
+		clif.NewCommand(`command:\+ amount:\d+ currency:\w{3}`, &depositController{}, clif.CommandHelp{
+			Info:  "Deposit some amount of currency:",
+			Usage: []string{"+ AMOUNT CURRENCY"},
+			Examples: []string{
+				"+ 100 usd     Add 100 USD",
+			},
+		}),
+	}
 	cfg := clif.AppConfig{
-		Commands: clif.Commands{
-			clif.NewCommand(`command:\+ amount:\d+ currency:\w{3}`, &depositController{}, clif.CommandHelp{
-				Info:  "Deposit some amount of currency:",
-				Usage: []string{"+ AMOUNT CURRENCY"},
-				Examples: []string{
-					"+ 100 usd     Add 100 USD",
-				},
-			}),
-		},
+		Commands: commands,
+		OnStart:  []string{"help"},
 	}
 	app := clif.NewApp(cfg)
-	if err := app.RunCommand("help"); err != nil {
-		log.Fatal(err)
-	}
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}

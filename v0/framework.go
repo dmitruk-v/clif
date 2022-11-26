@@ -28,22 +28,20 @@ func (app *app) Run() error {
 		return ErrNoUserCommands
 	}
 	app.clearConsole()
+	if err := app.runOnStart(); err != nil {
+		return app.formatError(err)
+	}
 	if err := app.runInputLoop(); err != nil {
 		return app.formatError(err)
 	}
 	return nil
 }
 
-func (app *app) RunCommand(input string) error {
-	if len(app.config.Commands) == 2 {
-		return ErrNoUserCommands
-	}
-	cmd, err := app.matchCommand(input)
-	if err != nil {
-		return app.formatError(err)
-	}
-	if err := app.executeCommand(cmd); err != nil {
-		return app.formatError(err)
+func (app *app) runOnStart() error {
+	for _, cmd := range app.config.OnStart {
+		if err := app.runCommand(cmd); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -63,23 +61,29 @@ func (app *app) runInputLoop() error {
 			}
 			return err
 		}
-		cmd, err := app.matchCommand(strings.TrimSpace(line))
-		if err != nil {
-			app.printError(err)
-			continue
-		}
-		if err := app.executeCommand(cmd); err != nil {
+		if err := app.runCommand(strings.TrimSpace(line)); err != nil {
 			app.printError(err)
 			continue
 		}
 	}
 }
 
-func (app *app) matchCommand(s string) (*command, error) {
+func (app *app) runCommand(src string) error {
+	cmd, err := app.matchCommand(src)
+	if err != nil {
+		return err
+	}
+	if err := app.executeCommand(cmd); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (app *app) matchCommand(src string) (*command, error) {
 	var found *command
 	for _, cmd := range app.config.Commands {
 		names := cmd.rgx.SubexpNames()
-		matches := cmd.rgx.FindStringSubmatch(s)
+		matches := cmd.rgx.FindStringSubmatch(src)
 		if matches == nil {
 			continue
 		}
@@ -90,7 +94,7 @@ func (app *app) matchCommand(s string) (*command, error) {
 		}
 	}
 	if found == nil {
-		return nil, fmt.Errorf("match command: no match for input %q", s)
+		return nil, fmt.Errorf("match command: no match for input %q", src)
 	}
 	return found, nil
 }

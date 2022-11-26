@@ -26,9 +26,9 @@ var (
 		Info:  "Show this help:",
 		Usage: []string{"help"},
 	})
-	quitCommand = newTypedCommand(QuitCommand, `command:quit|exit`, nil, CommandHelp{
+	quitCommand = newTypedCommand(QuitCommand, `command:quit`, nil, CommandHelp{
 		Info:  "Quit from app:",
-		Usage: []string{"quit", "exit"},
+		Usage: []string{"quit"},
 	})
 )
 

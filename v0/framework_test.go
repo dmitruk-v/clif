@@ -10,7 +10,7 @@ func TestNoCommands(t *testing.T) {
 		Commands: Commands{},
 	}
 	app := NewApp(cfg)
-	if err := app.RunCommand("whatever command"); err == nil {
+	if err := app.runCommand("whatever command"); err == nil {
 		t.Errorf("got: no errors, want error: no commands")
 	}
 	if err := app.Run(); err == nil {
@@ -40,7 +40,7 @@ func TestRunCommandSuccess(t *testing.T) {
 		"quit",
 	}
 	for _, input := range table {
-		if err := app.RunCommand(input); err != nil {
+		if err := app.runCommand(input); err != nil {
 			t.Errorf("got error: %v, want no errors", err)
 		}
 	}
