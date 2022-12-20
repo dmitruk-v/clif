@@ -19,7 +19,7 @@ func main() {
 	}
 	cfg := clif.AppConfig{
 		Commands: commands,
-		OnStart:  []string{"help"},
+		OnStart:  []string{},
 	}
 	app := clif.NewApp(cfg)
 	if err := app.Run(); err != nil {
