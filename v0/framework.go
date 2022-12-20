@@ -31,6 +31,7 @@ func (app *app) Run() error {
 	if err := app.runOnStart(); err != nil {
 		return app.formatError(err)
 	}
+	app.showStartMessage()
 	if err := app.runInputLoop(); err != nil {
 		return app.formatError(err)
 	}
@@ -139,6 +140,10 @@ func (app *app) showHelp() error {
 	}
 	fmt.Println(help)
 	return nil
+}
+
+func (app *app) showStartMessage() {
+	fmt.Println(startMessage)
 }
 
 func (app *app) clearConsole() {
